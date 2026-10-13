@@ -17,20 +17,34 @@
         }
     </script>
     <style>
-        body { font-family: 'Prompt', sans-serif; background-color: #0f172a; }
+        body { font-family: 'Prompt', sans-serif; background-color: #0f172a; margin: 0; overflow: hidden; }
+        
+        /* รูปแบบสำหรับหน้าจอมือถือ (แสดงผลเต็มจอเหมือนแอปจริง) */
         .phone-frame {
             width: 100%;
-            max-width: 410px;
-            height: 844px;
+            height: 100vh;
+            height: 100dvh; /* ปรับให้พอดีกับหน้าจอมือถือโดยอัตโนมัติ */
             background: #ffffff;
-            border-radius: 44px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
             position: relative;
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            border: 8px solid #334155;
+            border: none;
+            border-radius: 0;
         }
+        
+        /* รูปแบบสำหรับคอมพิวเตอร์/แท็บเล็ต (แสดงเป็นกรอบโทรศัพท์จำลอง) */
+        @media (min-width: 480px) {
+            .phone-frame {
+                max-width: 390px; /* ความกว้างมาตรฐานของโทรศัพท์ */
+                height: 90vh; /* ปรับความสูงให้ไม่ล้นจอคอม */
+                max-height: 844px; /* ความสูงสูงสุดเท่าขนาดโทรศัพท์จริง */
+                border-radius: 40px;
+                border: 8px solid #334155;
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            }
+        }
+
         /* Custom scrollbars */
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
@@ -39,7 +53,7 @@
         .no-select { user-select: none; -webkit-user-select: none; }
     </style>
 </head>
-<body class="min-h-screen flex items-center justify-center p-2 sm:p-4">
+<body class="h-screen flex items-center justify-center sm:p-4">
 
     <div class="phone-frame">
         
