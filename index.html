@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BinAlert - ระบบแจ้งเตือนขยะโรงเรียนจักรคำคณาทร</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Prompt', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Prompt', sans-serif; background-color: #0f172a; }
+        .phone-frame {
+            width: 100%;
+            max-width: 410px;
+            height: 844px;
+            background: #ffffff;
+            border-radius: 44px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            border: 8px solid #334155;
+        }
+        /* Custom scrollbars */
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+        /* Prevent text selection on map */
+        .no-select { user-select: none; -webkit-user-select: none; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-2 sm:p-4">
+
+    <div class="phone-frame">
+        
+        <!-- App Header -->
+        <header id="app-header" class="bg-slate-900 text-white px-5 py-4 flex justify-between items-center shadow-md z-20 shrink-0 hidden">
+            <div class="flex items-center space-x-3">
+                <button id="back-btn" onclick="goBack()" class="w-9 h-9 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-white transition hidden">
+                    <i class="fa-solid fa-arrow-left text-sm"></i>
+                </button>
+                <div>
+                    <h1 id="header-title" class="font-bold text-base leading-tight">BinAlert</h1>
+                    <p id="header-subtitle" class="text-[11px] text-slate-400">โรงเรียนจักรคำคณาทร</p>
+                </div>
+            </div>
+            <!-- Added correct ID to fix JS Error -->
+            <button id="switch-role-btn" onclick="switchRolePrompt()" class="bg-slate-800 hover:bg-slate-700 text-emerald-400 text-xs px-2.5 py-1.5 rounded-full font-medium border border-slate-700 flex items-center space-x-1 transition hidden">
+                <i class="fa-solid fa-right-left text-[10px]"></i>
+                <span id="role-badge-text">เปลี่ยนบทบาท</span>
+            </button>
+        </header>
+
+        <!-- Main Content Area -->
+        <div id="main-content" class="flex-1 overflow-y-auto bg-slate-50 relative flex flex-col">
+            <!-- Dynamically rendered by JavaScript -->
+        </div>
+
+        <!-- Bottom Navigation Bar -->
+        <nav id="bottom-nav" class="bg-white border-t border-slate-200 px-6 py-3 flex justify-around items-center z-20 shrink-0 shadow-[0_-5px_15px_rgba(0,0,0,0.05)] hidden">
+            <!-- Populated via JS -->
+        </nav>
+
+        <!-- Bottom Sheet Modal (Fixed Height to 50% for visibility) -->
+        <div id="bin-modal" class="absolute inset-x-0 bottom-0 bg-white rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.15)] border-t border-slate-200 p-6 z-50 transform translate-y-full transition-transform duration-300 flex flex-col h-[50%]">
+            <div class="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-5 shrink-0"></div>
+            
+            <div class="flex justify-between items-start mb-3 shrink-0">
+                <div>
+                    <span id="modal-status-badge" class="text-xs px-3 py-1 rounded-full font-semibold">ปกติ</span>
+                    <h3 id="modal-title" class="font-bold text-xl text-slate-900 mt-2">ชื่อจุดถังขยะ</h3>
+                    <p id="modal-location" class="text-sm text-slate-500 mt-1"><i class="fa-solid fa-location-dot text-emerald-600 mr-1"></i> ตำแหน่ง</p>
+                </div>
+                <button onclick="closeModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition shrink-0">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto py-2">
+                <div id="modal-reporter-info" class="text-sm text-amber-700 bg-amber-50 border border-amber-200 p-3.5 rounded-xl mb-4 hidden flex items-center">
+                    <i class="fa-solid fa-triangle-exclamation mr-2 text-lg"></i> 
+                    <span id="modal-reporter-text">นักเรียนแจ้งเมื่อ 10 นาทีที่แล้ว</span>
+                </div>
+            </div>
+
+            <!-- Action Button stays pinned to the bottom of the modal -->
+            <div class="mt-auto pt-4 shrink-0">
+                <button id="modal-action-btn" onclick="handleModalAction()" class="w-full py-4 rounded-2xl font-bold text-white text-base shadow-lg transition flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-check"></i>
+                    <span id="modal-action-text">บันทึกว่าจัดเก็บแล้ว</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Toast Notification -->
+        <div id="toast" class="absolute top-6 inset-x-6 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-2xl z-50 transform -translate-y-24 opacity-0 transition-all duration-300 flex items-center space-x-3 border border-slate-700">
+            <div id="toast-icon-bg" class="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                <i id="toast-icon" class="fa-solid fa-check text-sm"></i>
+            </div>
+            <div>
+                <h4 id="toast-title" class="font-bold text-xs">สำเร็จ</h4>
+                <p id="toast-message" class="text-[11px] text-slate-300">บันทึกข้อมูลเรียบร้อยแล้ว</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Application JavaScript Logic -->
+    <script>
+        let currentRole = null; 
+        let currentScreen = 'role-select'; 
+        let selectedBinId = null;
+
+        // Data array: All start as 'normal' (empty/cleared)
+        let binsData = [
+            { id: 1, name: "จุดถังขยะ อาคารโดม", location: "บริเวณโดม 115 ปี (จุดที่ 12)", status: "normal", reporter: null, time: null, x: 53, y: 38 },
+            { id: 2, name: "จุดถังขยะ สนามฟุตบอล", location: "ข้างสนามฟุตบอล / ลู่วิ่ง", status: "normal", reporter: null, time: null, x: 25, y: 72 },
+            { id: 3, name: "จุดถังขยะ หน้าอาคาร 4", location: "อาคารพิศาลโสภาคคุณ (อาคาร 4)", status: "normal", reporter: null, time: null, x: 58, y: 78 }
+        ];
+
+        window.onload = function() {
+            renderApp();
+        };
+
+        function setRole(role) {
+            currentRole = role;
+            if (role === 'housekeeper') {
+                currentScreen = 'housekeeper-home';
+            } else {
+                currentScreen = 'student-home';
+            }
+            renderApp();
+        }
+
+        function switchRolePrompt() {
+            currentRole = null;
+            currentScreen = 'role-select';
+            renderApp();
+        }
+
+        function navigateTo(screen) {
+            currentScreen = screen;
+            closeModal();
+            renderApp();
+        }
+
+        function goBack() {
+            closeModal();
+            if (currentRole === 'housekeeper') {
+                navigateTo('housekeeper-home');
+            } else {
+                navigateTo('student-home');
+            }
+        }
+
+        function renderApp() {
+            const content = document.getElementById('main-content');
+            const bottomNav = document.getElementById('bottom-nav');
+            const appHeader = document.getElementById('app-header');
+            const backBtn = document.getElementById('back-btn');
+            const switchRoleBtn = document.getElementById('switch-role-btn');
+
+            // 1. Role Selection Screen
+            if (currentScreen === 'role-select') {
+                appHeader.classList.add('hidden');
+                bottomNav.classList.add('hidden');
+                content.innerHTML = renderRoleSelectScreen();
+                return;
+            } else {
+                appHeader.classList.remove('hidden');
+            }
+
+            // 2. Manage Back Button & Switch Role Button
+            if (currentScreen === 'housekeeper-home' || currentScreen === 'student-home') {
+                // Hide back button on Home screens
+                backBtn.classList.add('hidden');
+                switchRoleBtn.classList.remove('hidden');
+            } else {
+                // Show back button on Map/List screens
+                backBtn.classList.remove('hidden');
+                switchRoleBtn.classList.add('hidden');
+            }
+
+            // 3. Render Content and Navigation based on role
+            if (currentScreen === 'housekeeper-home') {
+                content.innerHTML = renderHousekeeperDashboard();
+                bottomNav.innerHTML = renderHousekeeperNav();
+                bottomNav.classList.remove('hidden');
+                renderDashboardMapPins(); 
+            } else if (currentScreen === 'student-home') {
+                content.innerHTML = renderStudentDashboard();
+                bottomNav.innerHTML = renderStudentNav();
+                bottomNav.classList.remove('hidden');
+            } else if (currentScreen === 'map-view') {
+                content.innerHTML = renderMapView();
+                bottomNav.innerHTML = currentRole === 'housekeeper' ? renderHousekeeperNav() : renderStudentNav();
+                bottomNav.classList.remove('hidden');
+            } else if (currentScreen === 'list-view') {
+                content.innerHTML = renderListView();
+                bottomNav.innerHTML = renderHousekeeperNav();
+                bottomNav.classList.remove('hidden');
+            }
+        }
+
+        function renderRoleSelectScreen() {
+            return `
+                <div class="flex-1 bg-slate-900 flex flex-col items-center justify-center p-6 text-white text-center relative h-full">
+                    <div class="w-full max-w-sm flex flex-col items-center justify-center">
+                        <div class="mb-12 text-center">
+                            <div class="w-28 h-28 bg-emerald-500 rounded-[2rem] flex items-center justify-center text-5xl shadow-xl shadow-emerald-500/20 mx-auto mb-6">
+                                <i class="fa-solid fa-leaf"></i>
+                            </div>
+                            <h1 class="text-4xl font-bold tracking-tight mb-2">BinAlert</h1>
+                            <p class="text-sm text-slate-400">โรงเรียนจักรคำคณาทร</p>
+                        </div>
+
+                        <div class="space-y-4 w-full px-2">
+                            <button onclick="setRole('student')" class="w-full bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 p-5 rounded-2xl flex items-center space-x-4 transition">
+                                <div class="w-14 h-14 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center text-2xl shrink-0">
+                                    <i class="fa-solid fa-user-graduate"></i>
+                                </div>
+                                <div class="text-left">
+                                    <h3 class="font-bold text-base">นักเรียน</h3>
+                                    <p class="text-xs text-slate-400 mt-1">ช่วยแจ้งเตือนถังขยะเต็ม</p>
+                                </div>
+                            </button>
+
+                            <button onclick="setRole('housekeeper')" class="w-full bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 p-5 rounded-2xl flex items-center space-x-4 transition">
+                                <div class="w-14 h-14 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-2xl shrink-0">
+                                    <i class="fa-solid fa-broom"></i>
+                                </div>
+                                <div class="text-left">
+                                    <h3 class="font-bold text-base">แม่บ้าน / ภารโรง</h3>
+                                    <p class="text-xs text-slate-400 mt-1">ตรวจสอบและจัดการขยะ</p>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="absolute bottom-8 text-[11px] text-slate-500">
+                        Smart School Waste Management
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderHousekeeperDashboard() {
+            const urgentCount = binsData.filter(b => b.status === 'full').length;
+            const normalCount = binsData.filter(b => b.status === 'normal').length;
+
+            return `
+                <div class="p-5 space-y-5 pb-20">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="bg-emerald-500 text-white p-4 rounded-2xl shadow-md">
+                            <span class="text-2xl font-bold block">${normalCount}</span>
+                            <span class="text-xs font-medium text-emerald-100">จุดปกติ (ว่าง)</span>
+                        </div>
+                        <div class="bg-rose-500 text-white p-4 rounded-2xl shadow-md">
+                            <span class="text-2xl font-bold block">${urgentCount}</span>
+                            <span class="text-xs font-medium text-rose-100">ต้องเก็บด่วน</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+                        <div class="flex justify-between items-center mb-3">
+                            <h2 class="font-bold text-sm text-slate-800">ภาพรวมพื้นที่</h2>
+                            <button onclick="navigateTo('map-view')" class="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center">
+                                ดูแผนที่ <i class="fa-solid fa-chevron-right ml-1 text-[10px]"></i>
+                            </button>
+                        </div>
+                        
+                        <div onclick="navigateTo('map-view')" class="relative w-full h-44 rounded-xl overflow-hidden border border-slate-200 cursor-pointer group bg-slate-100">
+                            <!-- Dynamic Map background -->
+                            <img src="map-image.jpg" onerror="this.src='https://placehold.co/600x350/e2e8f0/94a3b8?text=Map+Overview'" class="w-full h-full object-cover opacity-60">
+                            <!-- Dashboard Map Pins container -->
+                            <div id="dashboard-map-pins" class="absolute inset-0"></div>
+                            
+                            <div class="absolute bottom-3 inset-x-0 flex justify-center">
+                                <span class="bg-white/90 text-slate-900 text-xs font-bold px-3.5 py-1.5 rounded-full shadow-lg">
+                                    แตะเพื่อดูแผนที่ 2D
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="font-bold text-sm text-slate-800 mb-3 flex items-center">
+                            <i class="fa-solid fa-bell text-rose-500 mr-2"></i> รายการแจ้งเตือนด่วน
+                        </h3>
+                        <div class="space-y-2.5">
+                            ${binsData.filter(b => b.status === 'full').length === 0 ? `
+                                <div class="bg-white p-6 rounded-2xl text-center border border-slate-200 shadow-sm">
+                                    <i class="fa-regular fa-circle-check text-emerald-500 text-3xl mb-2"></i>
+                                    <p class="text-xs font-bold text-slate-700">ยอดเยี่ยม! ไม่มีถังขยะเต็มในขณะนี้</p>
+                                </div>
+                            ` : binsData.filter(b => b.status === 'full').map(bin => `
+                                <div onclick="openBinModal(${bin.id})" class="bg-rose-50 border border-rose-200 p-3.5 rounded-2xl flex items-center justify-between cursor-pointer hover:shadow-md transition">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-10 h-10 rounded-xl bg-rose-500 text-white flex items-center justify-center font-bold text-sm shadow">
+                                            <i class="fa-solid fa-triangle-exclamation"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-bold text-xs text-slate-800">${bin.name}</h4>
+                                            <p class="text-[11px] text-rose-700 mt-0.5">แจ้งเมื่อ: ${bin.time}</p>
+                                        </div>
+                                    </div>
+                                    <span class="text-xs bg-rose-500 text-white px-2.5 py-1 rounded-full font-bold">จัดเก็บ</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderDashboardMapPins() {
+            const container = document.getElementById('dashboard-map-pins');
+            if (!container) return;
+            
+            container.innerHTML = binsData.map(bin => `
+                <div class="absolute transform -translate-x-1/2 -translate-y-1/2" style="left: ${bin.x}%; top: ${bin.y}%;">
+                    <div class="w-3 h-3 rounded-full ${bin.status === 'full' ? 'bg-rose-500 animate-ping' : 'bg-emerald-500'} border-2 border-white shadow-md"></div>
+                </div>
+            `).join('');
+        }
+
+        function renderStudentDashboard() {
+            return `
+                <div class="p-5 space-y-5 pb-20">
+                    <div class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-5 rounded-2xl shadow-lg">
+                        <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center mb-3">
+                            <i class="fa-solid fa-bullhorn text-lg"></i>
+                        </div>
+                        <h2 class="font-bold text-base">โหมดนักเรียนจิตอาสา</h2>
+                        <p class="text-xs text-blue-100 mt-1 leading-relaxed">พบถังขยะล้นหรือเต็ม? ช่วยกันแจ้งเตือนภารโรงเพื่อความสะอาดเรียบร้อยของโรงเรียนเรา</p>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="font-bold text-sm text-slate-800">แผนผังแจ้งเตือน</h3>
+                            <button onclick="navigateTo('map-view')" class="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center">
+                                เปิดแผนที่ <i class="fa-solid fa-chevron-right ml-1 text-[10px]"></i>
+                            </button>
+                        </div>
+                        <div onclick="navigateTo('map-view')" class="relative w-full h-48 rounded-xl overflow-hidden border border-slate-200 cursor-pointer group bg-slate-100">
+                            <img src="map-image.jpg" onerror="this.src='https://placehold.co/600x350/e2e8f0/94a3b8?text=Map'" class="w-full h-full object-cover opacity-70 group-hover:scale-105 transition duration-500">
+                            <div class="absolute inset-0 bg-slate-900/10 flex items-center justify-center">
+                                <span class="bg-blue-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg flex items-center">
+                                    <i class="fa-solid fa-hand-pointer mr-1.5"></i> เลือกจุดแจ้งถังขยะ
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderMapView() {
+            return `
+                <div class="flex-1 relative bg-[#e2e8f0] overflow-hidden flex items-center justify-center h-full">
+                    <div class="relative w-full max-w-[800px] aspect-[1.414/1] bg-white overflow-hidden shadow-xl no-select">
+                        <img src="map-image.jpg" onerror="this.src='https://placehold.co/800x565/f8fafc/1e293b?text=Map+Image+Not+Found'" class="w-full h-full object-contain">
+
+                        ${binsData.map(bin => `
+                            <div onclick="openBinModal(${bin.id})" class="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group z-10 hover:scale-110 transition" style="left: ${bin.x}%; top: ${bin.y}%;">
+                                <div class="relative flex flex-col items-center">
+                                    <div class="w-8 h-8 rounded-full ${bin.status === 'full' ? 'bg-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.6)]' : 'bg-emerald-500 shadow-md'} text-white flex items-center justify-center text-sm font-bold border-2 border-white">
+                                        <i class="fa-solid ${bin.status === 'full' ? 'fa-triangle-exclamation' : 'fa-check'}"></i>
+                                    </div>
+                                    <span class="bg-slate-900/90 text-white text-[9px] px-2 py-0.5 rounded shadow mt-1 whitespace-nowrap font-medium border border-slate-700">
+                                        ${bin.name.replace('จุดถังขยะ ', '')}
+                                    </span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <div class="absolute top-4 inset-x-4 bg-slate-900/80 backdrop-blur-md text-white px-4 py-2.5 rounded-xl text-center text-xs border border-slate-700 shadow-xl pointer-events-none flex items-center justify-center">
+                        <i class="fa-solid fa-hand-pointer text-emerald-400 mr-2"></i> แตะที่หมุดเพื่อตรวจสอบและจัดการ
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderListView() {
+            return `
+                <div class="p-5 space-y-3 pb-20">
+                    <div class="flex justify-between items-center mb-2">
+                        <h2 class="font-bold text-sm text-slate-800">รายการจุดทั้งหมด (3 จุด)</h2>
+                    </div>
+
+                    ${binsData.map(bin => `
+                        <div onclick="openBinModal(${bin.id})" class="bg-white border border-slate-200 p-4 rounded-2xl flex items-center justify-between cursor-pointer hover:border-emerald-300 transition shadow-sm">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 rounded-xl ${bin.status === 'full' ? 'bg-rose-500' : 'bg-emerald-600'} text-white flex items-center justify-center font-bold text-sm shadow">
+                                    <i class="fa-solid ${bin.status === 'full' ? 'fa-triangle-exclamation' : 'fa-check'}"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-xs text-slate-800">${bin.name}</h4>
+                                    <p class="text-[10px] text-slate-500 mt-0.5">${bin.location}</p>
+                                </div>
+                            </div>
+                            <span class="text-[11px] px-2.5 py-1.5 rounded-full font-bold ${bin.status === 'full' ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-700'}">
+                                ${bin.status === 'full' ? 'เต็มแล้ว' : 'ปกติ'}
+                            </span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function renderHousekeeperNav() {
+            return `
+                <button onclick="navigateTo('housekeeper-home')" class="flex flex-col items-center w-16 ${currentScreen === 'housekeeper-home' ? 'text-emerald-600' : 'text-slate-400 hover:text-slate-600'} transition">
+                    <i class="fa-solid fa-house text-lg mb-1"></i>
+                    <span class="text-[10px] font-medium">หน้าแรก</span>
+                </button>
+                <button onclick="navigateTo('map-view')" class="flex flex-col items-center w-16 ${currentScreen === 'map-view' ? 'text-emerald-600' : 'text-slate-400 hover:text-slate-600'} transition -mt-5">
+                    <div class="w-12 h-12 bg-emerald-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/40 border-4 border-white">
+                        <i class="fa-solid fa-map text-lg"></i>
+                    </div>
+                    <span class="text-[10px] font-medium mt-1 text-slate-600">แผนผัง</span>
+                </button>
+                <button onclick="navigateTo('list-view')" class="flex flex-col items-center w-16 ${currentScreen === 'list-view' ? 'text-emerald-600' : 'text-slate-400 hover:text-slate-600'} transition">
+                    <i class="fa-solid fa-list-ul text-lg mb-1"></i>
+                    <span class="text-[10px] font-medium">รายการ</span>
+                </button>
+            `;
+        }
+
+        function renderStudentNav() {
+            return `
+                <button onclick="navigateTo('student-home')" class="flex flex-col items-center w-20 ${currentScreen === 'student-home' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'} transition">
+                    <i class="fa-solid fa-house text-lg mb-1"></i>
+                    <span class="text-[10px] font-medium">หน้าแรก</span>
+                </button>
+                <button onclick="navigateTo('map-view')" class="flex flex-col items-center w-20 ${currentScreen === 'map-view' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'} transition -mt-5">
+                    <div class="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg shadow-blue-500/40 border-4 border-white">
+                        <i class="fa-solid fa-map-location-dot text-lg"></i>
+                    </div>
+                    <span class="text-[10px] font-medium mt-1 text-slate-600">แจ้งขยะเต็ม</span>
+                </button>
+            `;
+        }
+
+        function openBinModal(id) {
+            selectedBinId = id;
+            const bin = binsData.find(b => b.id === id);
+            if (!bin) return;
+
+            document.getElementById('modal-title').innerText = bin.name;
+            document.getElementById('modal-location').innerHTML = `<i class="fa-solid fa-location-dot text-emerald-600 mr-1"></i> ${bin.location}`;
+            
+            const badge = document.getElementById('modal-status-badge');
+            const actionBtn = document.getElementById('modal-action-btn');
+            const actionText = document.getElementById('modal-action-text');
+            const reporterInfo = document.getElementById('modal-reporter-info');
+
+            // Set UI based on bin status
+            if (bin.status === 'full') {
+                badge.className = "text-xs px-3 py-1 rounded-full font-semibold bg-rose-100 text-rose-700";
+                badge.innerText = "เต็มแล้ว";
+            } else {
+                badge.className = "text-xs px-3 py-1 rounded-full font-semibold bg-emerald-100 text-emerald-700";
+                badge.innerText = "ใช้งานปกติ";
+            }
+
+            // Reporter Info visibility
+            if (bin.reporter) {
+                reporterInfo.classList.remove('hidden');
+                document.getElementById('modal-reporter-text').innerText = `${bin.reporter} (${bin.time})`;
+            } else {
+                reporterInfo.classList.add('hidden');
+            }
+
+            // Button styling based on Current Role
+            if (currentRole === 'housekeeper') {
+                actionBtn.className = "w-full py-4 rounded-2xl font-bold text-white text-base shadow-lg transition flex items-center justify-center space-x-2 " + (bin.status === 'full' ? "bg-rose-600 hover:bg-rose-700" : "bg-emerald-600 hover:bg-emerald-700");
+                actionText.innerText = "บันทึกว่าจัดเก็บแล้ว";
+                actionBtn.disabled = false;
+            } else {
+                // Student Role Logic
+                if (bin.status === 'full') {
+                    actionBtn.className = "w-full py-4 rounded-2xl font-bold text-white text-base shadow-none bg-slate-300 cursor-not-allowed flex items-center justify-center space-x-2";
+                    actionText.innerText = "มีการแจ้งเตือนแล้ว";
+                    actionBtn.disabled = true;
+                } else {
+                    actionBtn.className = "w-full py-4 rounded-2xl font-bold text-white text-base shadow-lg bg-blue-600 hover:bg-blue-700 flex items-center justify-center space-x-2";
+                    actionText.innerText = "แจ้งว่าถังขยะเต็ม!";
+                    actionBtn.disabled = false;
+                }
+            }
+
+            document.getElementById('bin-modal').classList.remove('translate-y-full');
+        }
+
+        function closeModal() {
+            document.getElementById('bin-modal').classList.add('translate-y-full');
+            selectedBinId = null;
+        }
+
+        function handleModalAction() {
+            const bin = binsData.find(b => b.id === selectedBinId);
+            if (!bin) return;
+
+            if (currentRole === 'housekeeper') {
+                bin.status = 'normal';
+                bin.reporter = null;
+                bin.time = null;
+                showToast("จัดเก็บสำเร็จ", `จัดเก็บ ${bin.name} เรียบร้อยแล้ว`, 'emerald');
+            } else {
+                bin.status = 'full';
+                bin.reporter = "นักเรียนแจ้งเตือน";
+                bin.time = "เมื่อสักครู่";
+                showToast("ส่งแจ้งเตือนสำเร็จ", `แจ้งเตือนถังขยะเต็มไปยังแม่บ้านแล้ว`, 'blue');
+            }
+
+            closeModal();
+            // Re-render UI to update dots
+            renderApp();
+        }
+
+        function showToast(title, message, theme) {
+            const toast = document.getElementById('toast');
+            const iconBg = document.getElementById('toast-icon-bg');
+            const icon = document.getElementById('toast-icon');
+
+            document.getElementById('toast-title').innerText = title;
+            document.getElementById('toast-message').innerText = message;
+
+            if (theme === 'blue') {
+                iconBg.className = "w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0";
+                icon.className = "fa-solid fa-paper-plane text-sm";
+            } else {
+                iconBg.className = "w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0";
+                icon.className = "fa-solid fa-check text-sm";
+            }
+
+            toast.classList.remove('-translate-y-24', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('-translate-y-24', 'opacity-0');
+            }, 2500);
+        }
+    </script>
+</body>
+</html>
