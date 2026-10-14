@@ -129,12 +129,10 @@
             const lastSavedDate = localStorage.getItem('binalert_last_date');
 
             if (lastSavedDate !== todayStr) {
-                // New day detected! Reset bins and history
                 binsData = JSON.parse(JSON.stringify(defaultBinsData));
                 globalHistory = [];
                 saveLocalStorage();
                 localStorage.setItem('binalert_last_date', todayStr);
-                console.log("Daily reset triggered: Fresh start for today.");
             } else {
                 loadLocalStorage();
             }
@@ -497,47 +495,84 @@
             document.getElementById('camera-input').click();
         }
 
+        // Compressed and robust photo processing function
         function processPhoto(event) {
             const file = event.target.files[0];
-            if (!file) return;
+            if (!file) {
+                isUploading = false;
+                return;
+            }
 
             const bin = binsData.find(b => b.id === selectedBinId);
-            if (!bin) return;
+            if (!bin) {
+                isUploading = false;
+                event.target.value = '';
+                return;
+            }
 
             isUploading = true;
-            document.getElementById('modal-action-text').innerText = "กำลังบันทึกรูปภาพ...";
+            document.getElementById('modal-action-text').innerText = "กำลังประมวลผลรูปภาพ...";
             
             const reader = new FileReader();
             reader.onload = function(e) {
-                const now = new Date();
-                const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')} น.`;
-                
-                if (currentRole === 'housekeeper') {
-                    bin.status = 'normal';
-                    globalHistory.unshift({
-                        role: 'housekeeper',
-                        timestamp: timeString,
-                        image: e.target.result,
-                        binName: bin.name
-                    });
-                    showToast("อัปเดตเรียบร้อย", "บันทึกภาพยืนยันการเก็บเรียบร้อยแล้ว", "emerald");
-                } else {
-                    bin.status = 'full';
-                    bin.time = timeString;
-                    globalHistory.unshift({
-                        role: 'student',
-                        timestamp: timeString,
-                        image: e.target.result,
-                        binName: bin.name
-                    });
-                    showToast("แจ้งเตือนสำเร็จ", "ส่งข้อมูลขยะเต็มไปยังระบบเรียบร้อย", "blue");
-                }
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 600;
+                    const MAX_HEIGHT = 600;
+                    let width = img.width;
+                    let height = img.height;
 
-                saveLocalStorage();
-                isUploading = false;
-                event.target.value = '';
-                closeModal();
-                renderApp();
+                    if (width > height) {
+                        if (width > MAX_WIDTH) {
+                            height *= MAX_WIDTH / width;
+                            width = MAX_WIDTH;
+                        }
+                    } else {
+                        if (height > MAX_HEIGHT) {
+                            width *= MAX_HEIGHT / height;
+                            height = MAX_HEIGHT;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+
+                    const now = new Date();
+                    const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')} น.`;
+                    
+                    if (currentRole === 'housekeeper') {
+                        bin.status = 'normal';
+                        globalHistory.unshift({
+                            role: 'housekeeper',
+                            timestamp: timeString,
+                            image: compressedDataUrl,
+                            binName: bin.name
+                        });
+                        showToast("อัปเดตเรียบร้อย", "บันทึกภาพยืนยันการเก็บเรียบร้อยแล้ว", "emerald");
+                    } else {
+                        bin.status = 'full';
+                        bin.time = timeString;
+                        globalHistory.unshift({
+                            role: 'student',
+                            timestamp: timeString,
+                            image: compressedDataUrl,
+                            binName: bin.name
+                        });
+                        showToast("แจ้งเตือนสำเร็จ", "ส่งข้อมูลขยะเต็มไปยังระบบเรียบร้อย", "blue");
+                    }
+
+                    saveLocalStorage();
+                    isUploading = false;
+                    event.target.value = '';
+                    closeModal();
+                    renderApp();
+                };
+                img.src = e.target.result;
             };
             reader.readAsDataURL(file);
         }
