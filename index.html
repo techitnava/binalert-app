@@ -43,18 +43,12 @@
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
         .no-select { user-select: none; -webkit-user-select: none; }
-        
-        #db-loading {
-            position: absolute; inset: 0; background: rgba(255,255,255,0.9); z-index: 100;
-            display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
-        }
     </style>
 </head>
 <body class="h-screen flex items-center justify-center sm:p-4">
 
     <div class="phone-frame">
         
-        <!-- App Header -->
         <header id="app-header" class="bg-slate-900 text-white px-5 py-4 flex justify-between items-center shadow-md z-20 shrink-0 hidden">
             <div class="flex items-center space-x-3">
                 <button id="back-btn" onclick="goBack()" class="w-9 h-9 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-white transition hidden">
@@ -62,7 +56,7 @@
                 </button>
                 <div>
                     <h1 id="header-title" class="font-bold text-base leading-tight">BinAlert</h1>
-                    <p id="header-subtitle" class="text-[11px] text-slate-400">ระบบคลาวด์</p>
+                    <p id="header-subtitle" class="text-[11px] text-slate-400">ระบบอัจฉริยะโรงเรียน</p>
                 </div>
             </div>
             <button id="switch-role-btn" onclick="switchRolePrompt()" class="bg-slate-800 hover:bg-slate-700 text-emerald-400 text-xs px-2.5 py-1.5 rounded-full font-medium border border-slate-700 flex items-center space-x-1 transition hidden">
@@ -71,24 +65,17 @@
             </button>
         </header>
 
-        <!-- Main Content Area -->
         <div id="main-content" class="flex-1 overflow-y-auto bg-slate-50 relative flex flex-col">
-            <!-- Loading Screen while connecting to Firebase -->
-            <div id="db-loading" class="flex flex-col items-center justify-center h-full">
-                <div class="w-12 h-12 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin mb-4"></div>
-                <p class="text-sm font-bold text-slate-700">กำลังเชื่อมต่อฐานข้อมูล...</p>
-                <p class="text-xs text-slate-500 mt-1">Real-time Cloud Sync</p>
-            </div>
+            <!-- Initial view loaded via JS -->
         </div>
 
-        <!-- Bottom Navigation Bar -->
         <nav id="bottom-nav" class="bg-white border-t border-slate-200 px-6 py-3 flex justify-around items-center z-20 shrink-0 shadow-[0_-5px_15px_rgba(0,0,0,0.05)] hidden">
         </nav>
 
+        <!-- Hidden Camera Input -->
         <input type="file" id="camera-input" accept="image/*" capture="environment" class="hidden" onchange="processPhoto(event)">
 
-        <!-- Bottom Sheet Modal (Map Pin Click - Simplified) -->
-        <div id="bin-modal" class="absolute inset-x-0 bottom-0 bg-white rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.15)] border-t border-slate-200 p-6 z-50 transform translate-y-full transition-transform duration-300 flex flex-col min-h-[30%]">
+        <div id="bin-modal" class="absolute inset-x-0 bottom-0 bg-white rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.15)] border-t border-slate-200 p-6 z-50 transform translate-y-full transition-transform duration-300 flex flex-col">
             <div class="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-5 shrink-0"></div>
             
             <div class="flex justify-between items-start mb-6 shrink-0">
@@ -105,52 +92,28 @@
             <div class="w-full shrink-0 pb-4">
                 <button id="modal-action-btn" onclick="handleModalAction()" class="w-full py-4 rounded-2xl font-bold text-white text-base shadow-lg transition flex items-center justify-center space-x-2">
                     <i class="fa-solid fa-camera"></i>
-                    <span id="modal-action-text">บันทึกรูปภาพ</span>
+                    <span id="modal-action-text">ถ่ายรูประบุขยะเต็ม</span>
                 </button>
             </div>
         </div>
 
-        <!-- Toast Notification -->
         <div id="toast" class="absolute top-6 inset-x-6 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-2xl z-50 transform -translate-y-24 opacity-0 transition-all duration-300 flex items-center space-x-3 border border-slate-700 pointer-events-none">
             <div id="toast-icon-bg" class="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
                 <i id="toast-icon" class="fa-solid fa-check text-sm"></i>
             </div>
             <div>
                 <h4 id="toast-title" class="font-bold text-xs">สำเร็จ</h4>
-                <p id="toast-message" class="text-[11px] text-slate-300">ระบบคลาวด์อัปเดตแล้ว</p>
+                <p id="toast-message" class="text-[11px] text-slate-300">บันทึกข้อมูลเรียบร้อยแล้ว</p>
             </div>
         </div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, collection, addDoc, getDocs, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // Firebase Configuration
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-binalert';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-            apiKey: "mock", authDomain: "mock", projectId: "mock", storageBucket: "mock", messagingSenderId: "mock", appId: "mock"
-        };
-        
-        let app, db, auth, currentUser;
-
-        // Make functions globally available
-        window.setRole = setRole;
-        window.switchRolePrompt = switchRolePrompt;
-        window.navigateTo = navigateTo;
-        window.goBack = goBack;
-        window.openBinModal = openBinModal;
-        window.closeModal = closeModal;
-        window.handleModalAction = handleModalAction;
-        window.processPhoto = processPhoto;
-        window.requestNotificationPermission = requestNotificationPermission;
-
-        // Data Models
+    <script>
+        // Default Bins Data
         const defaultBinsData = [
-            { id: "bin_1", name: "จุดถังขยะ อาคารโดม", location: "บริเวณโดม 115 ปี (จุดที่ 12)", status: "normal", reporter: null, time: null, x: 53, y: 38 },
-            { id: "bin_2", name: "จุดถังขยะ สนามฟุตบอล", location: "ข้างสนามฟุตบอล / ลู่วิ่ง", status: "normal", reporter: null, time: null, x: 25, y: 72 },
-            { id: "bin_3", name: "จุดถังขยะ หน้าอาคาร 4", location: "อาคารพิศาลโสภาคคุณ (อาคาร 4)", status: "normal", reporter: null, time: null, x: 58, y: 78 }
+            { id: "bin_1", name: "จุดถังขยะ อาคารโดม", location: "บริเวณโดม 115 ปี (จุดที่ 12)", status: "normal", time: null, x: 53, y: 38 },
+            { id: "bin_2", name: "จุดถังขยะ สนามฟุตบอล", location: "ข้างสนามฟุตบอล / ลู่วิ่ง", status: "normal", time: null, x: 25, y: 72 },
+            { id: "bin_3", name: "จุดถังขยะ หน้าอาคาร 4", location: "อาคารพิศาลโสภาคคุณ (อาคาร 4)", status: "normal", time: null, x: 58, y: 78 }
         ];
 
         let binsData = [];
@@ -159,140 +122,54 @@
         let currentScreen = 'role-select'; 
         let selectedBinId = null;
         let isUploading = false;
-        let notificationsEnabled = false;
-        let lastReportedBinName = "";
 
-        async function initApp() {
-            try {
-                if (firebaseConfig.apiKey === 'mock') {
-                    console.log("Running in local mock mode.");
-                    binsData = [...defaultBinsData];
-                    document.getElementById('db-loading').classList.add('hidden');
-                    renderApp();
-                    return;
-                }
+        // Check & Reset Data Daily at Midnight
+        function checkAndResetDaily() {
+            const todayStr = new Date().toDateString();
+            const lastSavedDate = localStorage.getItem('binalert_last_date');
 
-                app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-                currentUser = auth.currentUser;
-                
-                await seedDatabaseIfNeeded();
-                setupRealtimeListeners();
-                
-                // Hide loading screen and show the app
-                document.getElementById('db-loading').classList.add('hidden');
-                renderApp();
-                
-            } catch (error) {
-                console.error("Firebase init error:", error);
-                binsData = [...defaultBinsData];
-                document.getElementById('db-loading').classList.add('hidden');
-                renderApp();
+            if (lastSavedDate !== todayStr) {
+                // New day detected! Reset bins and history
+                binsData = JSON.parse(JSON.stringify(defaultBinsData));
+                globalHistory = [];
+                saveLocalStorage();
+                localStorage.setItem('binalert_last_date', todayStr);
+                console.log("Daily reset triggered: Fresh start for today.");
+            } else {
+                loadLocalStorage();
             }
         }
 
-        function getBinsCollection() { return collection(db, 'artifacts', appId, 'public', 'data', 'bins'); }
-        function getHistoryCollection() { return collection(db, 'artifacts', appId, 'public', 'data', 'history'); }
+        function loadLocalStorage() {
+            const savedBins = localStorage.getItem('binalert_bins');
+            const savedHistory = localStorage.getItem('binalert_history');
 
-        async function seedDatabaseIfNeeded() {
-            if(!currentUser) return;
-            const snapshot = await getDocs(getBinsCollection());
-            if (snapshot.empty) {
-                console.log("Seeding initial bin data...");
-                for (const bin of defaultBinsData) {
-                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'bins', bin.id);
-                    await setDoc(docRef, bin);
-                }
+            if (savedBins) {
+                binsData = JSON.parse(savedBins);
+            } else {
+                binsData = JSON.parse(JSON.stringify(defaultBinsData));
+            }
+
+            if (savedHistory) {
+                globalHistory = JSON.parse(savedHistory);
+            } else {
+                globalHistory = [];
             }
         }
 
-        function setupRealtimeListeners() {
-            if(!currentUser) return;
-
-            // Bins Listener
-            onSnapshot(getBinsCollection(), (snapshot) => {
-                binsData = [];
-                let newlyFullBin = null;
-
-                snapshot.forEach((doc) => {
-                    const data = doc.data();
-                    binsData.push({ ...data, docId: doc.id });
-                    
-                    // Check if a bin was just marked as full (for notification)
-                    if(data.status === 'full' && data.name !== lastReportedBinName) {
-                        newlyFullBin = data.name;
-                    }
-                });
-                binsData.sort((a,b) => a.id.localeCompare(b.id));
-                
-                if(currentScreen !== 'role-select') renderApp();
-
-                // Trigger Notification if Housekeeper
-                if(currentRole === 'housekeeper' && newlyFullBin && newlyFullBin !== lastReportedBinName) {
-                    triggerPushNotification("แจ้งเตือนถังขยะเต็ม!", `นักเรียนได้แจ้งว่า ${newlyFullBin} เต็มแล้ว กรุณาตรวจสอบ`);
-                    lastReportedBinName = newlyFullBin; // Prevent duplicate alerts
-                }
-
-            }, (error) => console.error("Bins Listener Error:", error));
-
-            // History Listener
-            onSnapshot(getHistoryCollection(), (snapshot) => {
-                let tempHistory = [];
-                snapshot.forEach((doc) => {
-                    tempHistory.push({ ...doc.data(), docId: doc.id });
-                });
-                tempHistory.sort((a,b) => b.timestamp_ms - a.timestamp_ms);
-                globalHistory = tempHistory;
-                
-                if(currentScreen === 'history-view') renderApp();
-            }, (error) => console.error("History Listener Error:", error));
+        function saveLocalStorage() {
+            localStorage.setItem('binalert_bins', JSON.stringify(binsData));
+            localStorage.setItem('binalert_history', JSON.stringify(globalHistory));
         }
 
-        // --- Notification System ---
-        function requestNotificationPermission() {
-            if (!("Notification" in window)) {
-                console.log("This browser does not support desktop notification");
-                return;
-            }
-            if (Notification.permission === "granted") {
-                notificationsEnabled = true;
-            } else if (Notification.permission !== "denied") {
-                Notification.requestPermission().then(permission => {
-                    if (permission === "granted") {
-                        notificationsEnabled = true;
-                        showToast("เปิดแจ้งเตือนสำเร็จ", "คุณจะได้รับการแจ้งเตือนเมื่อมีนักเรียนแจ้งขยะเต็ม", "emerald");
-                    }
-                });
-            }
-        }
-
-        function triggerPushNotification(title, body) {
-            if (notificationsEnabled && Notification.permission === "granted") {
-                const options = {
-                    body: body,
-                    icon: "https://cdn-icons-png.flaticon.com/512/3299/3299935.png", // Generic bin icon
-                    vibrate: [200, 100, 200]
-                };
-                new Notification(title, options);
-            }
+        function initApp() {
+            checkAndResetDaily();
+            renderApp();
         }
 
         function setRole(role) {
             currentRole = role;
             currentScreen = (role === 'housekeeper') ? 'housekeeper-home' : 'student-home';
-            
-            // Ask for notification permission if housekeeper
-            if(role === 'housekeeper' && !notificationsEnabled) {
-                setTimeout(requestNotificationPermission, 1000);
-            }
-            
             renderApp();
         }
 
@@ -431,29 +308,6 @@
                             <div id="dashboard-map-pins" class="absolute inset-0"></div>
                         </div>
                     </div>
-                    <div>
-                        <h3 class="font-bold text-sm text-slate-800 mb-3 flex items-center">
-                            <i class="fa-solid fa-bell text-rose-500 mr-2"></i> รายการด่วน
-                        </h3>
-                        <div class="space-y-2.5">
-                            ${urgentCount === 0 ? `
-                                <div class="bg-white p-6 rounded-2xl text-center border border-slate-200 shadow-sm">
-                                    <i class="fa-regular fa-circle-check text-emerald-500 text-3xl mb-2"></i>
-                                    <p class="text-xs font-bold text-slate-700">เยี่ยมมาก! ไม่มีถังขยะเต็ม</p>
-                                </div>
-                            ` : binsData.filter(b => b.status === 'full').map(bin => `
-                                <div onclick="navigateTo('map-view'); setTimeout(()=>openBinModal('${bin.id}'), 100);" class="bg-rose-50 border border-rose-200 p-3.5 rounded-2xl flex items-center justify-between cursor-pointer">
-                                    <div class="flex items-center space-x-3">
-                                        <div class="w-10 h-10 rounded-xl bg-rose-500 text-white flex items-center justify-center shadow"><i class="fa-solid fa-triangle-exclamation"></i></div>
-                                        <div>
-                                            <h4 class="font-bold text-xs text-slate-800">${bin.name}</h4>
-                                            <p class="text-[10px] text-rose-700 mt-0.5">แจ้งเมื่อ: ${bin.time || 'ไม่ระบุ'}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
                 </div>
             `;
         }
@@ -527,14 +381,15 @@
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="font-bold text-lg text-slate-800 flex items-center">
                             <i class="fa-solid fa-clock-rotate-left mr-2 ${currentRole === 'student' ? 'text-blue-500' : 'text-emerald-500'}"></i> 
-                            ประวัติการแจ้งและการเก็บ
+                            ประวัติการแจ้งและการเก็บประจำวัน
                         </h2>
                     </div>
 
                     ${globalHistory.length === 0 ? `
                         <div class="bg-white p-8 rounded-2xl text-center border border-slate-200 shadow-sm mt-10">
                             <i class="fa-solid fa-folder-open text-slate-300 text-3xl mb-2"></i>
-                            <h3 class="font-bold text-slate-700 text-sm mb-1">ยังไม่มีประวัติรูปภาพ</h3>
+                            <h3 class="font-bold text-slate-700 text-sm mb-1">ยังไม่มีประวัติในวันนี้</h3>
+                            <p class="text-xs text-slate-400">ประวัติจะรีเซ็ตอัตโนมัติทุกวันใหม่</p>
                         </div>
                     ` : `
                         <div class="space-y-4">
@@ -642,77 +497,49 @@
             document.getElementById('camera-input').click();
         }
 
-        function getCompressedBase64(file, callback) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const img = new Image();
-                img.onload = function() {
-                    const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 400; // Small size for fast cloud sync
-                    const scaleSize = MAX_WIDTH / img.width;
-                    canvas.width = MAX_WIDTH;
-                    canvas.height = img.height * scaleSize;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    const dataUrl = canvas.toDataURL('image/jpeg', 0.6); 
-                    callback(dataUrl);
-                }
-                img.src = e.target.result;
-            }
-            reader.readAsDataURL(file);
-        }
-
-        async function processPhoto(event) {
+        function processPhoto(event) {
             const file = event.target.files[0];
             if (!file) return;
 
             const bin = binsData.find(b => b.id === selectedBinId);
-            if (!bin || !currentUser) return;
+            if (!bin) return;
 
             isUploading = true;
-            document.getElementById('modal-action-text').innerText = "กำลังอัปโหลดคลาวด์...";
+            document.getElementById('modal-action-text').innerText = "กำลังบันทึกรูปภาพ...";
             
-            const now = new Date();
-            const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')} น.`;
-            const timestampMs = now.getTime();
-
-            getCompressedBase64(file, async (compressedImage) => {
-                try {
-                    const binRef = doc(db, 'artifacts', appId, 'public', 'data', 'bins', bin.docId || bin.id);
-                    
-                    if (currentRole === 'housekeeper') {
-                        await updateDoc(binRef, { status: 'normal', reporter: null, time: null });
-                        
-                        await addDoc(getHistoryCollection(), {
-                            role: 'housekeeper',
-                            timestamp: timeString,
-                            timestamp_ms: timestampMs,
-                            image: compressedImage,
-                            binName: bin.name
-                        });
-                        showToast("อัปเดตเรียบร้อย", `บันทึกรูปและเปลี่ยนสถานะในระบบแล้ว`, 'emerald');
-                        lastReportedBinName = ""; // Reset the alert flag for this bin
-                    } else {
-                        await updateDoc(binRef, { status: 'full', reporter: "นักเรียน", time: timeString });
-                        
-                        await addDoc(getHistoryCollection(), {
-                            role: 'student',
-                            timestamp: timeString,
-                            timestamp_ms: timestampMs,
-                            image: compressedImage,
-                            binName: bin.name
-                        });
-                        showToast("แจ้งเตือนสำเร็จ", `ส่งข้อมูลเรียลไทม์ถึงแม่บ้านแล้ว`, 'blue');
-                    }
-                } catch (error) {
-                    console.error("Error saving data:", error);
-                    alert("เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล");
-                } finally {
-                    isUploading = false;
-                    event.target.value = '';
-                    closeModal();
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const now = new Date();
+                const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')} น.`;
+                
+                if (currentRole === 'housekeeper') {
+                    bin.status = 'normal';
+                    globalHistory.unshift({
+                        role: 'housekeeper',
+                        timestamp: timeString,
+                        image: e.target.result,
+                        binName: bin.name
+                    });
+                    showToast("อัปเดตเรียบร้อย", "บันทึกภาพยืนยันการเก็บเรียบร้อยแล้ว", "emerald");
+                } else {
+                    bin.status = 'full';
+                    bin.time = timeString;
+                    globalHistory.unshift({
+                        role: 'student',
+                        timestamp: timeString,
+                        image: e.target.result,
+                        binName: bin.name
+                    });
+                    showToast("แจ้งเตือนสำเร็จ", "ส่งข้อมูลขยะเต็มไปยังระบบเรียบร้อย", "blue");
                 }
-            });
+
+                saveLocalStorage();
+                isUploading = false;
+                event.target.value = '';
+                closeModal();
+                renderApp();
+            };
+            reader.readAsDataURL(file);
         }
 
         function showToast(title, message, theme) {
@@ -728,7 +555,7 @@
                 icon.className = "fa-solid fa-paper-plane text-sm";
             } else {
                 iconBg.className = "w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0";
-                icon.className = "fa-solid fa-cloud-arrow-up text-sm";
+                icon.className = "fa-solid fa-check text-sm";
             }
 
             toast.classList.remove('-translate-y-24', 'opacity-0');
@@ -740,8 +567,8 @@
             }, 3000);
         }
 
-        // Run initialization
-        initApp();
+        // Initialize App on Load
+        window.onload = initApp;
     </script>
 </body>
 </html>
