@@ -3,82 +3,120 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BinAlert - ระบบแจ้งเตือนขยะโรงเรียน</title>
-    <!-- Tailwind CSS -->
+    <title>BinAlert - ระบบแจ้งเตือนขยะโรงเรียนจักรคำคณาทร</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <!-- FontAwesome -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: { extend: { fontFamily: { sans: ['Prompt', 'sans-serif'] } } }
+        }
+    </script>
     <style>
-        body { font-family: 'Sarabun', sans-serif; -webkit-tap-highlight-color: transparent; }
-        #map { height: 65vh; width: 100%; border-radius: 1rem; z-index: 10; }
-        .custom-popup .leaflet-popup-content-wrapper { border-radius: 1rem; padding: 0; }
+        body { font-family: 'Prompt', sans-serif; background-color: #0f172a; margin: 0; overflow: hidden; }
+        
+        .phone-frame {
+            width: 100%;
+            height: 100vh;
+            height: 100dvh; 
+            background: #ffffff;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            border: none;
+            border-radius: 0;
+        }
+        
+        @media (min-width: 480px) {
+            .phone-frame {
+                max-width: 390px;
+                height: 90vh;
+                max-height: 844px;
+                border-radius: 40px;
+                border: 8px solid #334155;
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            }
+        }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+        .no-select { user-select: none; -webkit-user-select: none; }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 flex flex-col min-h-screen">
+<body class="h-screen flex items-center justify-center sm:p-4">
 
-    <!-- Header -->
-    <header class="bg-emerald-600 text-white p-4 shadow-md sticky top-0 z-50 flex justify-between items-center">
-        <div class="flex items-center space-x-2">
-            <i class="fa-solid fa-recycle text-2xl animate-spin" style="animation-duration: 8s;"></i>
-            <h1 class="text-xl font-bold tracking-wide">BinAlert</h1>
-        </div>
-        <div class="flex bg-emerald-700 p-1 rounded-xl shadow-inner">
-            <button id="btnStudent" onclick="switchMode('student')" class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all bg-white text-emerald-700 shadow">นักเรียน</button>
-            <button id="btnCleaner" onclick="switchMode('cleaner')" class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all text-white">แม่บ้าน</button>
-        </div>
-    </header>
-
-    <!-- Main Container -->
-    <main class="flex-1 p-4 max-w-md mx-auto w-full pb-24">
-        <!-- แผนที่แสดงจุดถังขยะ -->
-        <div class="mb-4 shadow-lg rounded-2xl overflow-hidden border border-slate-200">
-            <div id="map"></div>
-        </div>
-
-        <!-- สถานะและปุ่มควบคุม -->
-        <div id="actionContainer" class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 text-center">
-            <div id="statusInfo" class="mb-3 text-sm text-slate-500">กรุณาเลือกจุดถังขยะบนแผนที่ด้านบน</div>
-            <button id="actionBtn" disabled class="w-full py-3.5 rounded-xl font-bold text-white bg-slate-300 transition-all shadow-md flex items-center justify-center space-x-2 cursor-not-allowed">
-                <i class="fa-solid fa-camera text-lg"></i>
-                <span id="btnText">โปรดเลือกจุดถังขยะ</span>
+    <div class="phone-frame">
+        
+        <header id="app-header" class="bg-slate-900 text-white px-5 py-4 flex justify-between items-center shadow-md z-20 shrink-0 hidden">
+            <div class="flex items-center space-x-3">
+                <button id="back-btn" onclick="goBack()" class="w-9 h-9 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-white transition hidden">
+                    <i class="fa-solid fa-arrow-left text-sm"></i>
+                </button>
+                <div>
+                    <h1 id="header-title" class="font-bold text-base leading-tight">BinAlert</h1>
+                    <p id="header-subtitle" class="text-[11px] text-slate-400">ระบบเชื่อมต่อ Cloud (Real-time)</p>
+                </div>
+            </div>
+            <button id="switch-role-btn" onclick="switchRolePrompt()" class="bg-slate-800 hover:bg-slate-700 text-emerald-400 text-xs px-2.5 py-1.5 rounded-full font-medium border border-slate-700 flex items-center space-x-1 transition hidden">
+                <i class="fa-solid fa-right-left text-[10px]"></i>
+                <span id="role-badge-text">เปลี่ยนบทบาท</span>
             </button>
-            <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden">
-        </div>
+        </header>
 
-        <!-- ประวัติการแจ้งเตือนวันนี้ -->
-        <div class="mt-6">
-            <h2 class="text-md font-bold mb-3 flex items-center justify-between text-slate-700">
-                <span><i class="fa-solid fa-clock-rotate-left mr-2 text-emerald-600"></i>ประวัติการแจ้งเตือนวันนี้</span>
-                <span id="historyCount" class="text-xs bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full font-semibold">0 รายการ</span>
-            </h2>
-            <div id="historyList" class="space-y-2.5">
-                <!-- ประวัติจะถูกโหลดมาแสดงที่นี่ -->
+        <div id="main-content" class="flex-1 overflow-y-auto bg-slate-50 relative flex flex-col">
+            <!-- Initial view loaded via JS -->
+            <div class="flex-1 flex flex-col items-center justify-center p-6 text-slate-500">
+                <i class="fa-solid fa-circle-notch fa-spin text-3xl text-emerald-500 mb-4"></i>
+                <p class="text-sm font-medium">กำลังเชื่อมต่อฐานข้อมูล...</p>
             </div>
         </div>
-    </main>
 
-    <!-- Modal แสดงรูปภาพขยาย -->
-    <div id="imageModal" class="fixed inset-0 bg-black/80 z-50 hidden flex items-center justify-center p-4" onclick="closeImageModal()">
-        <div class="relative max-w-lg w-full bg-white rounded-2xl overflow-hidden shadow-2xl" onclick="event.stopPropagation()">
-            <img id="modalImg" src="" class="w-full h-auto max-h-[70vh] object-contain bg-black">
-            <div class="p-4 flex justify-between items-center bg-white">
-                <span id="modalCaption" class="text-sm font-medium text-slate-700"></span>
-                <button onclick="closeImageModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-xl text-sm font-bold transition-all">ปิด</button>
+        <nav id="bottom-nav" class="bg-white border-t border-slate-200 px-6 py-3 flex justify-around items-center z-20 shrink-0 shadow-[0_-5px_15px_rgba(0,0,0,0.05)] hidden">
+        </nav>
+
+        <!-- Hidden Camera Input optimized for Safari & Chrome -->
+        <input type="file" id="camera-input" accept="image/*" capture="environment" class="hidden" onchange="processPhoto(event)">
+
+        <div id="bin-modal" class="absolute inset-x-0 bottom-0 bg-white rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.15)] border-t border-slate-200 p-6 z-50 transform translate-y-full transition-transform duration-300 flex flex-col">
+            <div class="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-5 shrink-0"></div>
+            
+            <div class="flex justify-between items-start mb-6 shrink-0">
+                <div>
+                    <span id="modal-status-badge" class="text-xs px-3 py-1 rounded-full font-semibold">ปกติ</span>
+                    <h3 id="modal-title" class="font-bold text-xl text-slate-900 mt-2">ชื่อจุดถังขยะ</h3>
+                    <p id="modal-location" class="text-sm text-slate-500 mt-1"><i class="fa-solid fa-location-dot text-emerald-600 mr-1"></i> ตำแหน่ง</p>
+                </div>
+                <button onclick="closeModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition shrink-0">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <div class="w-full shrink-0 pb-4">
+                <button id="modal-action-btn" onclick="handleModalAction()" class="w-full py-4 rounded-2xl font-bold text-white text-base shadow-lg transition flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-camera"></i>
+                    <span id="modal-action-text">ถ่ายรูประบุขยะเต็ม</span>
+                </button>
+            </div>
+        </div>
+
+        <div id="toast" class="absolute top-6 inset-x-6 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-2xl z-50 transform -translate-y-24 opacity-0 transition-all duration-300 flex items-center space-x-3 border border-slate-700 pointer-events-none">
+            <div id="toast-icon-bg" class="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                <i id="toast-icon" class="fa-solid fa-check text-sm"></i>
+            </div>
+            <div>
+                <h4 id="toast-title" class="font-bold text-xs">สำเร็จ</h4>
+                <p id="toast-message" class="text-[11px] text-slate-300">บันทึกข้อมูลเรียบร้อยแล้ว</p>
             </div>
         </div>
     </div>
 
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
-    <!-- Firebase SDK (Modular v9) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, doc, setDoc, getDocs, onSnapshot, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection, addDoc, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // Firebase Configuration ของคุณ
+        // === FIREBASE CONFIGURATION (ของคุณ) ===
         const firebaseConfig = {
             apiKey: "AIzaSyA9PTYshb0p-epm6CaWQkdwIhV0gePdNlE",
             authDomain: "binalert-app-ee134.firebaseapp.com",
@@ -92,249 +130,514 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // ข้อมูลจุดถังขยะในโรงเรียน
-        const bins = [
-            { id: 1, name: "ถังขยะ หน้าตึกอำนวยการ", lat: 13.7563, lng: 100.5018 },
-            { id: 2, name: "ถังขยะ โรงอาหาร", lat: 13.7558, lng: 100.5025 },
-            { id: 3, name: "ถังขยะ หน้าอาคารเรียน 1", lat: 13.7570, lng: 100.5010 },
-            { id: 4, name: "ถังขยะ โรงยิมเนเซียม", lat: 13.7550, lng: 100.5030 }
+        const defaultBinsData = [
+            { id: "bin_1", name: "จุดถังขยะ อาคารโดม", location: "บริเวณโดม 115 ปี (จุดที่ 12)", status: "normal", time: null, x: 53, y: 38 },
+            { id: "bin_2", name: "จุดถังขยะ สนามฟุตบอล", location: "ข้างสนามฟุตบอล / ลู่วิ่ง", status: "normal", time: null, x: 25, y: 72 },
+            { id: "bin_3", name: "จุดถังขยะ หน้าอาคาร 4", location: "อาคารพิศาลโสภาคคุณ (อาคาร 4)", status: "normal", time: null, x: 58, y: 78 }
         ];
 
-        let currentMode = 'student';
-        let selectedBin = null;
-        let map, markers = {};
-        let binStatuses = {}; // เก็บสถานะถังขยะแบบ Real-time
+        let binsData = JSON.parse(JSON.stringify(defaultBinsData));
+        let globalHistory = [];
+        let currentRole = null; 
+        let currentScreen = 'role-select'; 
+        let selectedBinId = null;
+        let isUploading = false;
+        let isFirebaseConnected = false;
 
-        // เริ่มต้นการทำงานแผนที่
-        function initMap() {
-            map = L.map('map').setView([13.7560, 100.5020], 17);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '© OpenStreetMap'
-            }).addTo(map);
-
-            bins.forEach(bin => {
-                const marker = L.circleMarker([bin.lat, bin.lng], {
-                    radius: 12,
-                    fillColor: "#22c55e",
-                    color: "#ffffff",
-                    weight: 3,
-                    opacity: 1,
-                    fillOpacity: 0.9
-                }).addTo(map);
-
-                marker.on('click', () => selectBin(bin));
-                markers[bin.id] = marker;
+        function setupFirebaseListeners() {
+            // ฟังการเปลี่ยนแปลงของสถานะถังขยะทั้งหมด (Real-time)
+            onSnapshot(doc(db, "system", "bin_statuses"), (docSnap) => {
+                isFirebaseConnected = true;
+                if (docSnap.exists()) {
+                    const statuses = docSnap.data();
+                    binsData.forEach(bin => {
+                        if (statuses[bin.id]) {
+                            bin.status = statuses[bin.id].status;
+                            bin.time = statuses[bin.id].time;
+                        } else {
+                            bin.status = 'normal'; // default if not set
+                        }
+                    });
+                }
+                if (currentScreen !== 'role-select') {
+                    renderApp(); // รีเฟรชหน้าจอเมื่อข้อมูลเปลี่ยน
+                } else {
+                    renderApp(); // รีเฟรชเพื่อซ่อนหน้าจอโหลด
+                }
+            }, (error) => {
+                console.error("Firebase Snapshot Error:", error);
+                // Fallback for first load if document doesn't exist
+                isFirebaseConnected = true;
+                renderApp();
             });
 
-            // ดึงข้อมูลสถานะและประวัติจาก Firestore แบบ Real-time
-            listenToFirestore();
+            // ฟังการเปลี่ยนแปลงของประวัติการแจ้งเตือน (ดึงล่าสุด 50 รายการ)
+            const historyQuery = query(collection(db, "history"), orderBy("timestampMs", "desc"), limit(50));
+            onSnapshot(historyQuery, (snapshot) => {
+                globalHistory = [];
+                snapshot.forEach((doc) => {
+                    globalHistory.push(doc.data());
+                });
+                if (currentScreen === 'history-view') {
+                    renderApp(); // รีเฟรชหน้าประวัติ
+                }
+            });
         }
 
-        function selectBin(bin) {
-            selectedBin = bin;
-            Object.values(markers).forEach(m => m.setStyle({ color: '#ffffff', weight: 3 }));
-            markers[bin.id].setStyle({ color: '#fbbf24', weight: 5 });
+        // เริ่มเชื่อมต่อฐานข้อมูลทันทีเมื่อเปิดแอป
+        setupFirebaseListeners();
 
-            const statusInfo = document.getElementById('statusInfo');
-            const actionBtn = document.getElementById('actionBtn');
-            const btnText = document.getElementById('btnText');
+        function setRole(role) {
+            currentRole = role;
+            currentScreen = (role === 'housekeeper') ? 'housekeeper-home' : 'student-home';
+            renderApp();
+        }
 
-            statusInfo.innerHTML = `จุดที่เลือก: <strong class="text-emerald-700">${bin.name}</strong>`;
-            actionBtn.disabled = false;
-            actionBtn.classList.remove('bg-slate-300', 'cursor-not-allowed');
+        function switchRolePrompt() {
+            currentRole = null;
+            currentScreen = 'role-select';
+            renderApp();
+        }
 
-            if (currentMode === 'student') {
-                actionBtn.className = "w-full py-3.5 rounded-xl font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-all shadow-md flex items-center justify-center space-x-2";
-                btnText.innerText = "ถ่ายรูปแจ้งถังขยะเต็ม";
-                actionBtn.onclick = () => document.getElementById('cameraInput').click();
+        function navigateTo(screen) {
+            currentScreen = screen;
+            closeModal();
+            renderApp();
+        }
+
+        function goBack() {
+            closeModal();
+            navigateTo(currentRole === 'housekeeper' ? 'housekeeper-home' : 'student-home');
+        }
+
+        function renderApp() {
+            if (!isFirebaseConnected) return; // รอเชื่อมต่อเสร็จก่อน
+
+            const content = document.getElementById('main-content');
+            const bottomNav = document.getElementById('bottom-nav');
+            const appHeader = document.getElementById('app-header');
+            const backBtn = document.getElementById('back-btn');
+            const switchRoleBtn = document.getElementById('switch-role-btn');
+
+            if (currentScreen === 'role-select') {
+                appHeader.classList.add('hidden');
+                bottomNav.classList.add('hidden');
+                content.innerHTML = renderRoleSelectScreen();
+                return;
             } else {
-                const status = binStatuses[bin.id] || 'normal';
-                if (status === 'full') {
-                    actionBtn.className = "w-full py-3.5 rounded-xl font-bold text-white bg-amber-500 hover:bg-amber-600 transition-all shadow-md flex items-center justify-center space-x-2";
-                    btnText.innerText = "กดเพื่อยืนยันเคลียร์ขยะแล้ว";
-                    actionBtn.onclick = () => clearBin(bin.id);
+                appHeader.classList.remove('hidden');
+            }
+
+            if (currentScreen === 'housekeeper-home' || currentScreen === 'student-home') {
+                backBtn.classList.add('hidden');
+                switchRoleBtn.classList.remove('hidden');
+            } else {
+                backBtn.classList.remove('hidden');
+                switchRoleBtn.classList.add('hidden');
+            }
+
+            if (currentScreen === 'housekeeper-home') {
+                content.innerHTML = renderHousekeeperDashboard();
+                bottomNav.innerHTML = renderHousekeeperNav();
+                bottomNav.classList.remove('hidden');
+                renderDashboardMapPins(); 
+            } else if (currentScreen === 'student-home') {
+                content.innerHTML = renderStudentDashboard();
+                bottomNav.innerHTML = renderStudentNav();
+                bottomNav.classList.remove('hidden');
+            } else if (currentScreen === 'map-view') {
+                content.innerHTML = renderMapView();
+                bottomNav.innerHTML = currentRole === 'housekeeper' ? renderHousekeeperNav() : renderStudentNav();
+                bottomNav.classList.remove('hidden');
+            } else if (currentScreen === 'history-view') {
+                content.innerHTML = renderHistoryView();
+                bottomNav.innerHTML = currentRole === 'housekeeper' ? renderHousekeeperNav() : renderStudentNav();
+                bottomNav.classList.remove('hidden');
+            }
+        }
+
+        function renderRoleSelectScreen() {
+            return `
+                <div class="flex-1 bg-slate-900 flex flex-col items-center justify-center p-6 text-white text-center relative h-full">
+                    <div class="w-full max-w-sm flex flex-col items-center justify-center">
+                        <div class="mb-12 text-center">
+                            <div class="w-24 h-24 bg-emerald-500 rounded-[2rem] flex items-center justify-center text-4xl shadow-xl shadow-emerald-500/20 mx-auto mb-4 relative">
+                                <i class="fa-solid fa-leaf relative z-10"></i>
+                                <div class="absolute inset-0 bg-emerald-400 rounded-[2rem] animate-ping opacity-20"></div>
+                            </div>
+                            <h1 class="text-3xl font-bold tracking-tight mb-1">BinAlert</h1>
+                            <p class="text-xs text-emerald-400 font-medium bg-emerald-500/10 inline-block px-3 py-1 rounded-full"><i class="fa-solid fa-cloud"></i> เชื่อมต่อฐานข้อมูลแล้ว</p>
+                        </div>
+                        <div class="space-y-4 w-full px-2">
+                            <button onclick="setRole('student')" class="w-full bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 p-4 rounded-2xl flex items-center space-x-4 transition">
+                                <div class="w-12 h-12 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center text-xl shrink-0">
+                                    <i class="fa-solid fa-user-graduate"></i>
+                                </div>
+                                <div class="text-left">
+                                    <h3 class="font-bold text-sm">เข้าใช้งานเป็น นักเรียน</h3>
+                                    <p class="text-[11px] text-slate-400 mt-0.5">แจ้งเตือนถังขยะเต็มผ่านรูปถ่าย</p>
+                                </div>
+                            </button>
+                            <button onclick="setRole('housekeeper')" class="w-full bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 p-4 rounded-2xl flex items-center space-x-4 transition">
+                                <div class="w-12 h-12 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl shrink-0">
+                                    <i class="fa-solid fa-broom"></i>
+                                </div>
+                                <div class="text-left">
+                                    <h3 class="font-bold text-sm">เข้าใช้งานเป็น แม่บ้าน</h3>
+                                    <p class="text-[11px] text-slate-400 mt-0.5">รับแจ้งเตือนและเคลียร์จุดขยะ</p>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderHousekeeperDashboard() {
+            const urgentCount = binsData.filter(b => b.status === 'full').length;
+            const normalCount = binsData.filter(b => b.status === 'normal').length;
+            return `
+                <div class="p-5 space-y-5 pb-20">
+                    <div class="bg-gradient-to-r from-emerald-600 to-teal-700 text-white p-5 rounded-2xl shadow-lg relative overflow-hidden">
+                        <div class="relative z-10 flex items-center space-x-4">
+                            <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
+                                <i class="fa-solid fa-broom text-2xl"></i>
+                            </div>
+                            <div>
+                                <h2 class="font-bold text-lg">โหมดแม่บ้าน</h2>
+                                <p class="text-[11px] text-emerald-100 mt-0.5 leading-tight">ระบบรับแจ้งเตือนแบบเรียลไทม์</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="bg-emerald-50 text-emerald-700 p-4 rounded-2xl border border-emerald-200 shadow-sm">
+                            <span class="text-2xl font-bold block">${normalCount}</span>
+                            <span class="text-xs font-medium">จุดปกติ (ว่าง)</span>
+                        </div>
+                        <div class="bg-rose-50 text-rose-700 p-4 rounded-2xl border border-rose-200 shadow-sm relative overflow-hidden">
+                            ${urgentCount > 0 ? `<div class="absolute -right-4 -top-4 w-12 h-12 bg-rose-500 rounded-full opacity-20 animate-ping"></div>` : ''}
+                            <span class="text-2xl font-bold block relative z-10">${urgentCount}</span>
+                            <span class="text-xs font-medium relative z-10">ต้องเก็บด่วน</span>
+                        </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+                        <div class="flex justify-between items-center mb-3">
+                            <h2 class="font-bold text-sm text-slate-800">แผนผังจุดทิ้งขยะ</h2>
+                            <button onclick="navigateTo('map-view')" class="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center">
+                                ดูแผนที่เต็ม <i class="fa-solid fa-chevron-right ml-1 text-[10px]"></i>
+                            </button>
+                        </div>
+                        <div onclick="navigateTo('map-view')" class="relative w-full h-44 rounded-xl overflow-hidden border border-slate-200 cursor-pointer bg-slate-100">
+                            <img src="map-image.jpg" onerror="this.src='https://placehold.co/600x350/e2e8f0/94a3b8?text=Map+Overview'" class="w-full h-full object-cover opacity-60">
+                            <div id="dashboard-map-pins" class="absolute inset-0"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderStudentDashboard() {
+            return `
+                <div class="p-5 space-y-5 pb-20">
+                    <div class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-5 rounded-2xl shadow-lg relative overflow-hidden">
+                        <div class="relative z-10 flex items-center space-x-4">
+                            <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
+                                <i class="fa-solid fa-user-graduate text-2xl"></i>
+                            </div>
+                            <div>
+                                <h2 class="font-bold text-lg">โหมดนักเรียน</h2>
+                                <p class="text-[11px] text-blue-100 mt-0.5 leading-tight">ช่วยแจ้งเตือนแม่บ้านเมื่อขยะล้น</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="font-bold text-sm text-slate-800">แผนผังจุดทิ้งขยะ</h3>
+                            <button onclick="navigateTo('map-view')" class="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center">
+                                เปิดแผนที่ <i class="fa-solid fa-chevron-right ml-1 text-[10px]"></i>
+                            </button>
+                        </div>
+                        <div onclick="navigateTo('map-view')" class="relative w-full h-48 rounded-xl overflow-hidden border border-slate-200 cursor-pointer group bg-slate-100">
+                            <img src="map-image.jpg" onerror="this.src='https://placehold.co/600x350/e2e8f0/94a3b8?text=Map'" class="w-full h-full object-cover opacity-70 group-hover:scale-105 transition duration-500">
+                            <div class="absolute inset-0 bg-slate-900/10 flex items-center justify-center">
+                                <span class="bg-blue-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg flex items-center">
+                                    <i class="fa-solid fa-camera mr-1.5"></i> เลือกจุดถ่ายรูปแจ้งเตือน
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderDashboardMapPins() {
+            const container = document.getElementById('dashboard-map-pins');
+            if (!container) return;
+            container.innerHTML = binsData.map(bin => `
+                <div class="absolute transform -translate-x-1/2 -translate-y-1/2" style="left: ${bin.x}%; top: ${bin.y}%;">
+                    <div class="w-3 h-3 rounded-full ${bin.status === 'full' ? 'bg-rose-500 animate-ping' : 'bg-emerald-500'} border-2 border-white shadow-md"></div>
+                </div>
+            `).join('');
+        }
+
+        function renderMapView() {
+            return `
+                <div class="flex-1 relative bg-[#e2e8f0] overflow-hidden flex items-center justify-center h-full">
+                    <div class="absolute top-4 left-4 right-4 bg-white/90 backdrop-blur-sm p-3 rounded-xl shadow-sm text-center z-10 border border-white/50">
+                        <p class="text-xs font-semibold text-slate-700"><i class="fa-solid fa-hand-pointer text-emerald-500 mr-1"></i> แตะที่หมุดบนแผนที่เพื่อดำเนินการ</p>
+                    </div>
+                    <div class="relative w-full max-w-[800px] aspect-[1.414/1] bg-white overflow-hidden shadow-xl no-select">
+                        <img src="map-image.jpg" onerror="this.src='https://placehold.co/800x565/f8fafc/1e293b?text=Map+Image+Not+Found'" class="w-full h-full object-contain">
+                        ${binsData.map(bin => `
+                            <div onclick="openBinModal('${bin.id}')" class="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer z-10" style="left: ${bin.x}%; top: ${bin.y}%;">
+                                <div class="relative flex flex-col items-center group">
+                                    <div class="w-9 h-9 rounded-full ${bin.status === 'full' ? 'bg-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.6)] animate-bounce' : 'bg-emerald-500 shadow-md'} text-white flex items-center justify-center text-sm font-bold border-2 border-white transition-transform group-hover:scale-110">
+                                        <i class="fa-solid ${bin.status === 'full' ? 'fa-triangle-exclamation' : 'fa-recycle'}"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderHistoryView() {
+            // กรองประวัติเฉพาะของวันนี้
+            const todayStr = new Date().toDateString();
+            const todaysHistory = globalHistory.filter(item => item.dateStr === todayStr);
+
+            return `
+                <div class="p-5 space-y-4 pb-20">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="font-bold text-lg text-slate-800 flex items-center">
+                            <i class="fa-solid fa-clock-rotate-left mr-2 ${currentRole === 'student' ? 'text-blue-500' : 'text-emerald-500'}"></i> 
+                            ประวัติของวันนี้ (เรียลไทม์)
+                        </h2>
+                    </div>
+
+                    ${todaysHistory.length === 0 ? `
+                        <div class="bg-white p-8 rounded-2xl text-center border border-slate-200 shadow-sm mt-10">
+                            <i class="fa-solid fa-cloud-arrow-up text-slate-300 text-4xl mb-3"></i>
+                            <h3 class="font-bold text-slate-700 text-sm mb-1">ยังไม่มีประวัติในวันนี้</h3>
+                            <p class="text-xs text-slate-400">เมื่อมีการแจ้งเตือน ข้อมูลจะแสดงที่นี่ทันที</p>
+                        </div>
+                    ` : `
+                        <div class="space-y-4">
+                            ${todaysHistory.map(item => `
+                                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                                    <div class="p-3 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                                        <div class="flex items-center space-x-2">
+                                             <div class="w-6 h-6 rounded-full ${item.role === 'student' ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600'} flex items-center justify-center shrink-0">
+                                                <i class="fa-solid ${item.role === 'student' ? 'fa-triangle-exclamation text-[10px]' : 'fa-check text-[10px]'}"></i>
+                                            </div>
+                                            <span class="font-bold text-xs text-slate-700">${item.role === 'student' ? 'มีคนแจ้งขยะเต็ม' : 'แม่บ้านเคลียร์แล้ว'}</span>
+                                        </div>
+                                        <span class="text-[10px] text-slate-400 font-medium">${item.timestamp}</span>
+                                    </div>
+                                    <div class="p-3">
+                                        <p class="text-xs font-semibold text-slate-800 mb-2">${item.binName}</p>
+                                        ${item.image ? `<img src="${item.image}" class="w-full h-40 object-cover rounded-xl border border-slate-200 shadow-sm" alt="รูปภาพประวัติ">` : ''}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `}
+                </div>
+            `;
+        }
+
+        function renderHousekeeperNav() {
+            return `
+                <button onclick="navigateTo('housekeeper-home')" class="flex flex-col items-center w-20 ${currentScreen === 'housekeeper-home' ? 'text-emerald-600' : 'text-slate-400'} transition">
+                    <i class="fa-solid fa-house text-lg mb-1"></i><span class="text-[10px]">หน้าแรก</span>
+                </button>
+                <button onclick="navigateTo('history-view')" class="flex flex-col items-center w-20 ${currentScreen === 'history-view' ? 'text-emerald-600' : 'text-slate-400'} transition -mt-5">
+                    <div class="w-12 h-12 bg-emerald-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/40 border-4 border-white">
+                        <i class="fa-solid fa-clock-rotate-left text-lg"></i>
+                    </div><span class="text-[10px] mt-1 text-slate-600">ประวัติ</span>
+                </button>
+                <button onclick="navigateTo('map-view')" class="flex flex-col items-center w-20 ${currentScreen === 'map-view' ? 'text-emerald-600' : 'text-slate-400'} transition">
+                    <i class="fa-solid fa-map text-lg mb-1"></i><span class="text-[10px]">แผนผัง</span>
+                </button>
+            `;
+        }
+
+        function renderStudentNav() {
+            return `
+                <button onclick="navigateTo('student-home')" class="flex flex-col items-center w-20 ${currentScreen === 'student-home' ? 'text-blue-600' : 'text-slate-400'} transition">
+                    <i class="fa-solid fa-house text-lg mb-1"></i><span class="text-[10px]">หน้าแรก</span>
+                </button>
+                <button onclick="navigateTo('map-view')" class="flex flex-col items-center w-20 ${currentScreen === 'map-view' ? 'text-blue-600' : 'text-slate-400'} transition -mt-5">
+                    <div class="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg shadow-blue-500/40 border-4 border-white">
+                        <i class="fa-solid fa-camera text-lg"></i>
+                    </div><span class="text-[10px] mt-1 text-slate-600">แจ้งขยะ</span>
+                </button>
+                 <button onclick="navigateTo('history-view')" class="flex flex-col items-center w-20 ${currentScreen === 'history-view' ? 'text-blue-600' : 'text-slate-400'} transition">
+                    <i class="fa-solid fa-clock-rotate-left text-lg mb-1"></i><span class="text-[10px]">ประวัติ</span>
+                </button>
+            `;
+        }
+
+        function openBinModal(id) {
+            selectedBinId = id;
+            const bin = binsData.find(b => b.id === id);
+            if (!bin) return;
+
+            document.getElementById('modal-title').innerText = bin.name;
+            document.getElementById('modal-location').innerHTML = `<i class="fa-solid fa-location-dot text-emerald-600 mr-1"></i> ${bin.location}`;
+            
+            const badge = document.getElementById('modal-status-badge');
+            const actionBtn = document.getElementById('modal-action-btn');
+            const actionText = document.getElementById('modal-action-text');
+
+            if (bin.status === 'full') {
+                badge.className = "text-xs px-3 py-1 rounded-full font-semibold bg-rose-100 text-rose-700";
+                badge.innerText = "เต็มแล้ว (รอเก็บ)";
+            } else {
+                badge.className = "text-xs px-3 py-1 rounded-full font-semibold bg-emerald-100 text-emerald-700";
+                badge.innerText = "ใช้งานปกติ";
+            }
+
+            if (currentRole === 'housekeeper') {
+                actionBtn.className = "w-full py-4 rounded-2xl font-bold text-white text-base shadow-lg transition flex items-center justify-center space-x-2 " + (bin.status === 'full' ? "bg-emerald-600 hover:bg-emerald-700" : "bg-slate-300 opacity-50 cursor-not-allowed");
+                actionText.innerText = "📸 ถ่ายรูปยืนยันการเคลียร์ขยะ";
+                actionBtn.disabled = bin.status !== 'full';
+            } else {
+                if (bin.status === 'full') {
+                    actionBtn.className = "w-full py-4 rounded-2xl font-bold text-white text-base shadow-none bg-slate-300 cursor-not-allowed flex items-center justify-center space-x-2";
+                    actionText.innerText = "มีการแจ้งเตือนจุดนี้ไปแล้ว";
+                    actionBtn.disabled = true;
                 } else {
-                    actionBtn.className = "w-full py-3.5 rounded-xl font-bold text-white bg-slate-400 cursor-not-allowed";
-                    btnText.innerText = "ถังขยะปกติดี (ไม่ต้องทำความสะอาด)";
-                    actionBtn.onclick = null;
+                    actionBtn.className = "w-full py-4 rounded-2xl font-bold text-white text-base shadow-lg bg-blue-600 hover:bg-blue-700 flex items-center justify-center space-x-2";
+                    actionText.innerText = "📸 ถ่ายรูประบุขยะเต็ม";
+                    actionBtn.disabled = false;
                 }
             }
+
+            document.getElementById('bin-modal').classList.remove('translate-y-full');
         }
 
-        window.switchMode = function(mode) {
-            currentMode = mode;
-            selectedBin = null;
-            document.getElementById('statusInfo').innerText = "กรุณาเลือกจุดถังขยะบนแผนที่ด้านบน";
-            const btn = document.getElementById('actionBtn');
-            btn.disabled = true;
-            btn.className = "w-full py-3.5 rounded-xl font-bold text-white bg-slate-300 transition-all shadow-md flex items-center justify-center space-x-2 cursor-not-allowed";
-            document.getElementById('btnText').innerText = "โปรดเลือกจุดถังขยะ";
-
-            Object.values(markers).forEach(m => m.setStyle({ color: '#ffffff', weight: 3 }));
-
-            if (mode === 'student') {
-                document.getElementById('btnStudent').className = "px-3 py-1.5 rounded-lg text-sm font-medium transition-all bg-white text-emerald-700 shadow";
-                document.getElementById('btnCleaner').className = "px-3 py-1.5 rounded-lg text-sm font-medium transition-all text-white";
-            } else {
-                document.getElementById('btnCleaner').className = "px-3 py-1.5 rounded-lg text-sm font-medium transition-all bg-white text-emerald-700 shadow";
-                document.getElementById('btnStudent').className = "px-3 py-1.5 rounded-lg text-sm font-medium transition-all text-white";
-            }
+        function closeModal() {
+            document.getElementById('bin-modal').classList.add('translate-y-full');
+            selectedBinId = null;
         }
 
-        // จัดการถ่ายภาพและบีบอัดภาพก่อนส่งขึ้น Firebase
-        const cameraInput = document.getElementById('cameraInput');
-        cameraInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file || !selectedBin) return;
+        function handleModalAction() {
+            if (isUploading) return;
+            const fileInput = document.getElementById('camera-input');
+            fileInput.value = ''; 
+            fileInput.click();
+        }
 
+        async function processPhoto(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const bin = binsData.find(b => b.id === selectedBinId);
+            if (!bin) return;
+
+            isUploading = true;
+            document.getElementById('modal-action-text').innerText = "กำลังอัปโหลดขึ้น Cloud...";
+            
             const reader = new FileReader();
-            reader.onload = function(event) {
+            reader.onload = function(e) {
                 const img = new Image();
-                img.onload = function() {
+                img.onload = async function() {
                     const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 600;
-                    const MAX_HEIGHT = 600;
+                    // ลดขนาดภาพให้เล็กลงเพื่อให้ส่งเข้า Firestore ได้เร็ว
+                    const MAX_WIDTH = 400; 
                     let width = img.width;
                     let height = img.height;
 
-                    if (width > height) {
-                        if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
-                    } else {
-                        if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
                     }
 
                     canvas.width = width;
                     canvas.height = height;
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
-                    const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
 
-                    saveAlertToFirebase(selectedBin, compressedDataUrl);
-                }
-                img.src = event.target.result;
-            }
-            reader.readAsDataURL(file);
-            cameraInput.value = ''; // เคลียร์ค่าเพื่อให้กดถ่ายซ้ำได้ทันที
-        });
+                    const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.5); // บีบอัด 50%
 
-        // บันทึกข้อมูลลง Firestore
-        async function saveAlertToFirebase(bin, imgData) {
-            const timeStr = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-            const dateStr = new Date().toISOString().split('T')[0];
-            const alertId = "alert_" + Date.now();
+                    const now = new Date();
+                    const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')} น.`;
+                    const dateStr = now.toDateString();
+                    
+                    const newStatus = currentRole === 'housekeeper' ? 'normal' : 'full';
 
-            try {
-                // บันทึกประวัติ
-                await setDoc(doc(db, "binalert_history", alertId), {
-                    id: alertId,
-                    binId: bin.id,
-                    binName: bin.name,
-                    time: timeStr,
-                    date: dateStr,
-                    image: imgData
-                });
+                    try {
+                        // 1. อัปเดตสถานะถังขยะใน Firebase
+                        await setDoc(doc(db, "system", "bin_statuses"), {
+                            [bin.id]: { status: newStatus, time: timeString }
+                        }, { merge: true });
 
-                // อัปเดตสถานะถังขยะเป็น "เต็ม"
-                await setDoc(doc(db, "binalert_statuses", String(bin.id)), {
-                    status: 'full'
-                });
-
-                alert("แจ้งเตือนถังขยะเต็มสำเร็จ!");
-                selectBin(bin);
-            } catch (error) {
-                console.error("Error saving alert: ", error);
-                alert("เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล");
-            }
-        }
-
-        // แม่บ้านกดเคลียร์ถังขยะ
-        async function clearBin(binId) {
-            try {
-                await setDoc(doc(db, "binalert_statuses", String(binId)), {
-                    status: 'normal'
-                });
-                alert("เคลียร์ถังขยะเรียบร้อยแล้ว สถานะกลับเป็นปกติ");
-                selectBin(bins.find(b => b.id === binId));
-            } catch (error) {
-                console.error("Error clearing bin: ", error);
-            }
-        }
-
-        // ดึงข้อมูลและฟังการเปลี่ยนแปลงแบบ Real-time จาก Firebase
-        function listenToFirestore() {
-            // ฟังสถานะถังขยะ
-            onSnapshot(collection(db, "binalert_statuses"), (snapshot) => {
-                binStatuses = {};
-                snapshot.forEach((doc) => {
-                    binStatuses[doc.id] = doc.data().status;
-                });
-
-                // อัปเดตสีหมุดบนแผนที่
-                bins.forEach(bin => {
-                    const status = binStatuses[bin.id] || 'normal';
-                    if (markers[bin.id]) {
-                        markers[bin.id].setStyle({
-                            fillColor: status === 'full' ? '#ef4444' : '#22c55e'
+                        // 2. บันทึกประวัติใน Firebase
+                        await addDoc(collection(db, "history"), {
+                            role: currentRole,
+                            timestamp: timeString,
+                            timestampMs: Date.now(), // สำหรับเรียงลำดับ
+                            dateStr: dateStr, // สำหรับกรองรายวัน
+                            image: compressedDataUrl,
+                            binName: bin.name
                         });
+
+                        if (currentRole === 'housekeeper') {
+                            showToast("อัปเดตเรียบร้อย", "บันทึกภาพยืนยันการเก็บไปยัง Cloud แล้ว", "emerald");
+                        } else {
+                            showToast("แจ้งเตือนสำเร็จ", "ส่งข้อมูลขยะเต็มไปยังแม่บ้านแบบเรียลไทม์", "blue");
+                        }
+                    } catch (error) {
+                        console.error("Firebase Error:", error);
+                        alert("เกิดข้อผิดพลาดในการอัปโหลด กรุณาลองใหม่");
                     }
-                });
 
-                if (selectedBin) selectBin(selectedBin);
-            });
-
-            // ฟังประวัติการแจ้งเตือนของวันนี้
-            onSnapshot(collection(db, "binalert_history"), (snapshot) => {
-                const historyList = document.getElementById('historyList');
-                historyList.innerHTML = '';
-                
-                const todayStr = new Date().toISOString().split('T')[0];
-                let histories = [];
-                snapshot.forEach((doc) => {
-                    const data = doc.data();
-                    if (data.date === todayStr) {
-                        histories.push(data);
-                    }
-                });
-
-                // เรียงจากล่าสุดไปเก่าสุด
-                histories.sort((a, b) => b.id.localeCompare(a.id));
-                document.getElementById('historyCount').innerText = `${histories.length} รายการ`;
-
-                if (histories.length === 0) {
-                    historyList.innerHTML = `<div class="text-center py-6 text-slate-400 text-sm bg-white rounded-2xl border border-slate-100">ยังไม่มีประวัติการแจ้งเตือนในวันนี้</div>`;
-                    return;
-                }
-
-                histories.forEach(item => {
-                    const div = document.createElement('div');
-                    div.className = "flex items-center justify-between bg-white p-3 rounded-2xl shadow-sm border border-slate-100";
-                    div.innerHTML = `
-                        <div class="flex items-center space-x-3">
-                            <img src="${item.image}" class="w-12 h-12 object-cover rounded-xl cursor-pointer border border-slate-200" onclick="openImageModal('${item.image}', '${item.binName} (${item.time})')">
-                            <div>
-                                <h3 class="text-sm font-bold text-slate-700">${item.binName}</h3>
-                                <p class="text-xs text-rose-500 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-1"></i>ถังขยะเต็ม • ${item.time}</p>
-                            </div>
-                        </div>
-                        <span class="text-xs bg-rose-50 text-rose-600 px-2.5 py-1 rounded-full font-bold">รอเคลียร์</span>
-                    `;
-                    historyList.appendChild(div);
-                });
-            });
+                    isUploading = false;
+                    event.target.value = '';
+                    closeModal();
+                    // ไม่ต้องเรียก renderApp() เพราะ onSnapshot จะทำงานอัตโนมัติเมื่อข้อมูลเปลี่ยน
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
         }
 
-        window.openImageModal = function(src, caption) {
-            document.getElementById('modalImg').src = src;
-            document.getElementById('modalCaption').innerText = caption;
-            document.getElementById('imageModal').classList.remove('hidden');
+        function showToast(title, message, theme) {
+            const toast = document.getElementById('toast');
+            const iconBg = document.getElementById('toast-icon-bg');
+            const icon = document.getElementById('toast-icon');
+
+            document.getElementById('toast-title').innerText = title;
+            document.getElementById('toast-message').innerText = message;
+
+            if (theme === 'blue') {
+                iconBg.className = "w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0";
+                icon.className = "fa-solid fa-paper-plane text-sm";
+            } else {
+                iconBg.className = "w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0";
+                icon.className = "fa-solid fa-check text-sm";
+            }
+
+            toast.classList.remove('-translate-y-24', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('-translate-y-24', 'opacity-0');
+            }, 3000);
         }
 
-        window.closeImageModal = function() {
-            document.getElementById('imageModal').classList.add('hidden');
-        }
+        window.setRole = setRole;
+        window.switchRolePrompt = switchRolePrompt;
+        window.navigateTo = navigateTo;
+        window.goBack = goBack;
+        window.openBinModal = openBinModal;
+        window.closeModal = closeModal;
+        window.handleModalAction = handleModalAction;
+        window.processPhoto = processPhoto;
 
-        window.onload = initMap;
     </script>
 </body>
 </html>
